@@ -4,6 +4,8 @@ from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from glob import glob
+from os import mkdir
+from os.path import exists
 from os.path import expanduser
 from os.path import join
 from pathlib import Path
@@ -49,8 +51,11 @@ def manipulate_downloaded_files() -> list:
     files_in_execution = glob(download_path)
     for file in files_in_execution:
         if "Cartoes_Incluidos" in file or "Boleto Ticket Alimentação" in file:
-            filename = file.split("\\")[-1]
-            new_file_name = join(f"./input/{current_month}", filename)
+            filename = file.split("\\")[-1]  # TODO create last file check
+            month_folder = f"./input/{current_month}"
+            if not exists(month_folder):
+                mkdir(month_folder)
+            new_file_name = join(month_folder, filename)
             move(file, new_file_name)
             pdf_files.append(new_file_name)
     return pdf_files

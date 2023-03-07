@@ -58,7 +58,7 @@ def fill_employee_form(webdriver: webdriver, employee_data: dict) -> None:
     """Fill the form with employee data from input file"""
     checkbox = "/html/body/form/div[3]/div[2]/div[3]/div[2]/div[1]/div[20]/div/div[7]/div/div[2]/div/table/tbody"
     for index in employee_data["ID"].index:
-        valor = employee_data["Conta"].loc[index]
+        valor = employee_data["Conta"].loc[index]  # TODO null value validation
         webdriver.find_element(By.XPATH, f'{checkbox}/tr[{employee_data.loc[index, "ID"]}]/td[1]/input').click()
         sleep(1)
         webdriver.find_element(
