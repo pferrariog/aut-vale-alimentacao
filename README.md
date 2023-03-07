@@ -13,6 +13,8 @@ Após o instalar as dependências de software na máquina, crie o ambiente virtu
 
 ### TODO
 - Implementar testes
+- Virtualização + Docker
+- Migrar p/ Google Sheets ou Criar formulário p/ inserção de valores
 
 ### Links úteis
 - [Poetry documentation](https://python-poetry.org/docs/)

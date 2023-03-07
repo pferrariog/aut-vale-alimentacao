@@ -1,6 +1,5 @@
 from datetime import date
 from datetime import timedelta
-from pathlib import Path
 from time import sleep
 
 from keyboard import press_and_release
@@ -10,6 +9,8 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from yaml import safe_load
+
+from sender import mail_sender
 
 
 def web_browser_connect(*options: str) -> webdriver.Chrome:
@@ -26,14 +27,14 @@ def web_browser_connect(*options: str) -> webdriver.Chrome:
     return browser
 
 
-def get_date():
+def get_date() -> str:
     """Função para retornar a data corretamente conforme o campo"""
     tomorrow = date.today() + timedelta(days=1)
     date_today = tomorrow.strftime("%d/%m/%Y")
     return date_today
 
 
-def login_up(webdriver, user: str, password: str) -> None:
+def login_up(webdriver: webdriver, user: str, password: str) -> None:
     """Login into portal"""
     webdriver.get("https://wss.upbrasil.com/portalup/login.aspx")
     webdriver.find_element(By.NAME, "txtUsuarioEmpresa").send_keys(user)
@@ -41,7 +42,7 @@ def login_up(webdriver, user: str, password: str) -> None:
     webdriver.find_element(By.NAME, "form_up_entrar").click()
 
 
-def order_openning(webdriver, order_date) -> None:
+def order_openning(webdriver: webdriver, order_date: str) -> None:
     """Get to the order screen"""
     webdriver.get("https://wss.upbrasil.com/SGP/CadastroPedidoOnline.aspx")
     webdriver.find_element(By.ID, value="txtDataEntrega").send_keys(order_date)
@@ -53,7 +54,7 @@ def order_openning(webdriver, order_date) -> None:
     sleep(2)
 
 
-def fill_employee_form(webdriver, employee_data):
+def fill_employee_form(webdriver: webdriver, employee_data: dict) -> None:
     """Fill the form with employee data from input file"""
     checkbox = "/html/body/form/div[3]/div[2]/div[3]/div[2]/div[1]/div[20]/div/div[7]/div/div[2]/div/table/tbody"
     for index in employee_data["ID"].index:
@@ -91,7 +92,7 @@ def browse_to_output_report(webdriver: webdriver) -> None:
     sleep(120)
 
 
-def save_report(webdriver):
+def save_report(webdriver: webdriver) -> None:
     """Download the PDF report"""
     webdriver.find_element(By.XPATH, "//input[@value='Imprimir Boleto'][@type='submit']").click()
     sleep(1)
@@ -114,20 +115,20 @@ def save_report(webdriver):
     webdriver.close()
 
 
-def main_execution(user: str, password: str) -> None:
+def main_execution(credentials: dict) -> None:
     """Execução principal da automação"""
     current_webdriver = web_browser_connect()
     employee_data = read_excel(r".\input\Dadosfunc.xlsx", dtype={"Conta": str})
     order_date = get_date()
-    login_up(current_webdriver, user, password)
+    login_up(current_webdriver, credentials["login"], credentials["senha"])
     order_openning(current_webdriver, order_date)
     fill_employee_form(current_webdriver, employee_data)
     browse_to_output_report(current_webdriver)
     save_report(current_webdriver)
+    mail_sender(credentials["username"], credentials["password"], "", order_date, credentials["to"])
 
 
 if __name__ == "__main__":
-    default_path = Path(__file__).parent / "input/up.yaml"
-    with open(default_path) as file:
-        credentials = safe_load(file)
-    main_execution(credentials["login"], credentials["senha"])
+    with open("./input/up.yaml") as file:
+        process_dict = safe_load(file)
+    main_execution(process_dict)
