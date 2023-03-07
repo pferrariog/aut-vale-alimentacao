@@ -1,24 +1,28 @@
 from datetime import date
 from datetime import timedelta
-from os import getenv
+from pathlib import Path
 from time import sleep
 
-from dotenv import find_dotenv
-from dotenv import load_dotenv
+from keyboard import press_and_release
+from keyboard import write
 from pandas import read_excel
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
+from yaml import safe_load
 
 
 def web_browser_connect(*options: str) -> webdriver.Chrome:
     """Função p/ configurar o driver corretamente com a versão do browser"""
+    # browser_options = "user-data-dir=Perfil"
+
     chrome_options = webdriver.ChromeOptions()
     if options is not None:
         for option in options:
             chrome_options.add_argument(argument=option)
     chrome_service = Service(executable_path="chromedriver.exe")
     browser = webdriver.Chrome(service=chrome_service, options=chrome_options)
+    browser.maximize_window()
     return browser
 
 
@@ -29,92 +33,101 @@ def get_date():
     return date_today
 
 
-def main_execution(chrome, user: str, password: str, df):
-    """Execução principal da automação"""
-    chrome.get("https://wss.upbrasil.com/portalup/login.aspx")
-    chrome.find_element(By.NAME, value="txtUsuarioEmpresa").send_keys(user)
-    chrome.find_element(By.NAME, value="txtSenha").send_keys(password)
-    chrome.find_element(By.NAME, value="form_up_entrar").click()
-    chrome.get("https://wss.upbrasil.com/SGP/CadastroPedidoOnline.aspx")
-    chrome.find_element(By.ID, value="txtDataEntrega").send_keys(order_date)
-    chrome.find_element(By.CSS_SELECTOR, value="#ContentPlaceHolder1_ddlPlanoVenda > option:nth-child(2)").click()
-    chrome.find_element(By.CSS_SELECTOR, value="#ContentPlaceHolder1_btnSalvar").click()
-    chrome.find_element(By.CSS_SELECTOR, value="#ContentPlaceHolder1_ddlProduto > option:nth-child(2)").click()
+def login_up(webdriver, user: str, password: str) -> None:
+    """Login into portal"""
+    webdriver.get("https://wss.upbrasil.com/portalup/login.aspx")
+    webdriver.find_element(By.NAME, "txtUsuarioEmpresa").send_keys(user)
+    webdriver.find_element(By.NAME, "txtSenha").send_keys(password)
+    webdriver.find_element(By.NAME, "form_up_entrar").click()
+
+
+def order_openning(webdriver, order_date) -> None:
+    """Get to the order screen"""
+    webdriver.get("https://wss.upbrasil.com/SGP/CadastroPedidoOnline.aspx")
+    webdriver.find_element(By.ID, value="txtDataEntrega").send_keys(order_date)
+    webdriver.find_element(By.CSS_SELECTOR, value="#ContentPlaceHolder1_ddlPlanoVenda > option:nth-child(2)").click()
+    webdriver.find_element(By.CSS_SELECTOR, value="#ContentPlaceHolder1_btnSalvar").click()
+    webdriver.find_element(By.CSS_SELECTOR, value="#ContentPlaceHolder1_ddlProduto > option:nth-child(2)").click()
     sleep(1)
-    chrome.find_element(By.CSS_SELECTOR, value="#ContentPlaceHolder1_btnPesquisaUsuario").click()
+    webdriver.find_element(By.CSS_SELECTOR, value="#ContentPlaceHolder1_btnPesquisaUsuario").click()
     sleep(2)
 
-    # setar valores por pessoa
-    for index in df["ID"].index:
-        valor = df["Conta"].loc[index]
 
-        # formatar valor
-        if len(valor) < 6:
-            valor_certo = valor + "0"
-        else:
-            valor_certo = valor[:6]
+def fill_employee_form(webdriver, employee_data):
+    """Fill the form with employee data from input file"""
+    checkbox = "/html/body/form/div[3]/div[2]/div[3]/div[2]/div[1]/div[20]/div/div[7]/div/div[2]/div/table/tbody"
+    for index in employee_data["ID"].index:
+        valor = employee_data["Conta"].loc[index]
+        webdriver.find_element(By.XPATH, f'{checkbox}/tr[{employee_data.loc[index, "ID"]}]/td[1]/input').click()
+        sleep(1)
+        webdriver.find_element(
+            By.XPATH, f'//*[@id="ContentPlaceHolder1_gvwCartoes_txtValorCarga_{employee_data.loc[index, "ID"] - 2}"]'
+        ).send_keys(f"{float(valor):.2f}")
+        sleep(1)
 
-        # filtrar por numeração de ID
-        if index < 4:
-            chrome.find_element(
-                By.NAME,
-                value=f"ctl00$ContentPlaceHolder1$gvwCartoes$ctl0" f'{df["ID"].loc[index]}$chkUsuariosSelecionados',
-            ).click()
-            sleep(1)
-            chrome.find_element(
-                By.CSS_SELECTOR, value=f"#ContentPlaceHolder1_gvwCartoes_txtValorCarga_" f'{df["ID"].loc[index] - 2}'
-            ).send_keys(valor_certo)
-            sleep(1)
-        else:
-            chrome.find_element(
-                By.NAME, value=f'ctl00$ContentPlaceHolder1$gvwCartoes$ctl{df["ID"].loc[index]}$chkUsuariosSelecionados'
-            ).click()
-            sleep(1)
-            chrome.find_element(
-                By.CSS_SELECTOR, value=f"#ContentPlaceHolder1_gvwCartoes_txtValorCarga_" f'{df["ID"].loc[index] - 2}'
-            ).send_keys(valor_certo)
-            sleep(1)
 
-    # inclusão de usuários
-    chrome.find_element(By.CSS_SELECTOR, value="#ContentPlaceHolder1_btnIncluirUsuarios").click()
-    sleep(4)
-
-    chrome.switch_to.alert.accept()
+def browse_to_output_report(webdriver: webdriver) -> None:
+    """Browse the website until generate output report screen"""
+    webdriver.find_element(By.CSS_SELECTOR, value="#ContentPlaceHolder1_btnIncluirUsuarios").click()
+    sleep(3)
+    webdriver.switch_to.alert.accept()
     sleep(2)
 
-    chrome.find_element(By.CSS_SELECTOR, value="#ContentPlaceHolder1_btnGerarPdfIncluidos").click()
+    # Generate PDF w/ employees included
+    webdriver.find_element(By.CSS_SELECTOR, value="#ContentPlaceHolder1_btnGerarPdfIncluidos").click()
     sleep(1)
 
-    chrome.find_element(By.CSS_SELECTOR, value="#ContentPlaceHolder1_btnProximo").click()
-    sleep(4)
-
-    chrome.switch_to.alert.accept()
+    webdriver.find_element(By.CSS_SELECTOR, "#ContentPlaceHolder1_btnProximo").click()
+    sleep(3)
+    webdriver.switch_to.alert.accept()
     sleep(2)
+    webdriver.find_element(By.CSS_SELECTOR, value="#ContentPlaceHolder1_btnEnviarPedido").click()
+    sleep(5)
+    webdriver.switch_to.alert.accept()
+    sleep(5)
+    webdriver.switch_to.alert.accept()
 
-    chrome.find_element(By.CSS_SELECTOR, value="#ContentPlaceHolder1_btnEnviarPedido").click()
-    sleep(4)
-
-    chrome.switch_to.alert.accept()
-    sleep(10)
-
-    chrome.switch_to.alert.accept()
+    # Waiting the report generation
     sleep(120)
 
-    chrome.find_element(By.CSS_SELECTOR, value="#ContentPlaceHolder1_btnBoleto").click()
+
+def save_report(webdriver):
+    """Download the PDF report"""
+    webdriver.find_element(By.XPATH, "//input[@value='Imprimir Boleto'][@type='submit']").click()
     sleep(1)
+    webdriver.find_element(By.XPATH, "//input[@title='Gerar boleto'][@type='image']").click()
+    sleep(5)
 
-    chrome.find_element(By.CSS_SELECTOR, value="#ContentPlaceHolder1_gvwBoletos_imgImprimirBoleto_0").click()
+    # Switch to PDF popup screen
+    window_popup = webdriver.window_handles[1]
+    webdriver.switch_to.window(window_popup)
+    sleep(3)
 
-    sleep(100)
-    chrome.quit()
+    # Save and rename file
+    press_and_release("ctrl+s")
+    sleep(1)
+    write(f"Boleto Ticket Alimentação - {date.today()}.pdf")
+    sleep(1)
+    press_and_release("enter")
+
+    sleep(1)
+    webdriver.close()
+
+
+def main_execution(user: str, password: str) -> None:
+    """Execução principal da automação"""
+    current_webdriver = web_browser_connect()
+    employee_data = read_excel(r".\input\Dadosfunc.xlsx", dtype={"Conta": str})
+    order_date = get_date()
+    login_up(current_webdriver, user, password)
+    order_openning(current_webdriver, order_date)
+    fill_employee_form(current_webdriver, employee_data)
+    browse_to_output_report(current_webdriver)
+    save_report(current_webdriver)
 
 
 if __name__ == "__main__":
-    load_dotenv(find_dotenv())
-    login = getenv("UP_LOGIN")
-    senha = getenv("UP_SENHA")
-    df_func = read_excel(r".\input\Dadosfunc.xlsx", dtype={"Conta": "str"})
-    order_date = get_date()
-    browser_options = "user-data-dir=Perfil"
-    chrome_browser = web_browser_connect()
-    main_execution(chrome_browser, login, senha, df_func)
+    default_path = Path(__file__).parent / "input/up.yaml"
+    with open(default_path) as file:
+        credentials = safe_load(file)
+    main_execution(credentials["login"], credentials["senha"])

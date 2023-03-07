@@ -5,16 +5,14 @@
 Projeto em python criado utilizando a biblioteca selenium para automatizar um processo de lançamento de vale alimentação de uma empresa.
 
 ### Primeiros Passos
-A estrutura é baseada nos padrões do [Poetry](https://python-poetry.org/)  que segue a PEP 517, portanto para utilizar deve-se tê-lo instalado na máquina.
-
-Após o instalar, crie o ambiente virtual e execute o comando `poetry install` para instalar as dependências do projeto.
+Após o instalar as dependências de software na máquina, crie o ambiente virtual com o comando `poetry shell`e execute o comando `poetry install` para instalar as dependências do projeto.
 
 ### Dependências de software
 - Python v. 3.10+ instalado
 - Poetry 1.1+ instalado
 
 ### TODO
-- Implementar testes e passar info's privadas para arquivos .yaml
+- Implementar testes
 
 ### Links úteis
 - [Poetry documentation](https://python-poetry.org/docs/)

@@ -7,12 +7,8 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = ">=3.10, <3.11"
-pandas = "^1.4.4"
-openpyxl = "^3.0.10"
-numpy = "^1.23.3"
 requests = "^2.28.1"
 selenium = "^4.4.3"
-python-dotenv = "^0.21.0"
 isort = "^5.10.1"
 auto-py-to-exe = "^2.23.1"
 black = "^22.12.0"
@@ -22,6 +18,12 @@ flake8-print = "^5.0.0"                                     # procura por prints
 flake8-docstrings = "^1.6.0"                                # checa a existencia de docstrings
 flake8-annotations = "^2.9.1"
 flake8-bugbear = "^22.8.23"                                 # checa bugs e problemas de design
+keyboard = "^0.13.5"
+PyYAML = "^6.0"
+pandas = "^1.5.3"
+pre-commit = "^3.1.1"
+commitizen = "^2.42.1"
+openpyxl = "^3.1.1"
 
 
 [build-system]
